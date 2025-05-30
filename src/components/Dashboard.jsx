@@ -1,152 +1,144 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Chart } from "react-google-charts";
-import Highcharts from "highcharts";
-import HighchartsReact from "highcharts-react-official";
-import "../styles/Dashboard.css";
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { RadialBarChart, RadialBar, Legend } from 'recharts';
+import { Chart } from 'react-google-charts';
 
-function Dashboard() {
-  const [stateData, setStateData] = useState([]);
-  const [pump1Data, setPump1Data] = useState([]);
-  const [timeData, setTimeData] = useState([]);
-  const [statusText, setStatusText] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const Dashboard = () => {
+    const [data, setData] = useState(null);
 
-  const getBitState = (registro, bitIndex) => {
-    return bitIndex < 16 ? (registro & (1 << bitIndex)) !== 0 : false;
-  };
-
-  const updateStateText = (registro) => {
-    if (typeof registro !== "number") return;
-
-    const bit1 = getBitState(registro, 1);
-    const bit2 = getBitState(registro, 2);
-    const bit6 = getBitState(registro, 6);
-    const bit7 = getBitState(registro, 7);
-
-    const texto0 = "ESTADO:";
-    const texto1 = bit1 ? "LIGADO" : "PARADO";
-    const texto2 = bit2 ? "COM CARGA" : "SEM CARGA";
-    const texto6 = bit6 ? "COM ALARME" : "SEM ALARME";
-    const texto7 = bit7 ? "COM AVISO" : "SEM AVISO";
-
-    setStatusText(`${texto0} ${texto1} ${texto2} ${texto6} ${texto7}`);
-  };
-
-  useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await axios.get("http://localhost:3000/api/nivel/");
-
-        console.log(response)
-
-        setStateData(response.data.state_data);
-        setPump1Data(response.data.pump1_data);
-        setTimeData(response.data.time_data);
-
-        const lastState = response.data.state_data.at(-1);
-        updateStateText(lastState);
-      } catch (err) {
-        console.error("Erro ao buscar dados:", err.message);
-        setError("Erro ao buscar dados.");
-      } finally {
-        setLoading(false);
-      }
+        try {
+            const response = await axios.get('http://localhost:3000/api/nivel/');
+            const latestData = response.data[response.data.length - 1];
+            setData(latestData);
+        } catch (error) {
+            console.error('Erro ao buscar dados:', error);
+        }
     };
 
-    fetchData();
+    useEffect(() => {
+        fetchData();
 
-    const interval = setInterval(fetchData, 10000); // Atualiza a cada 10 segundos
-    return () => clearInterval(interval);
-  }, []);
+        const interval = setInterval(() => {
+            fetchData();
+        }, 3000);
 
-  const gaugeOptions1 = {
-    width: 380,
-    height: 380,
-    redFrom: 0,
-    redTo: 6,
-    yellowFrom: 6,
-    yellowTo: 7.5,
-    greenFrom: 7.5,
-    greenTo: 9,
-    minorTicks: 10,
-    max: 9,
-  };
+        return () => clearInterval(interval);
+    }, []);
 
-  const gaugeOptions2 = {
-    width: 380,
-    height: 380,
-    redFrom: 0,
-    redTo: 10,
-    yellowFrom: 10,
-    yellowTo: 50,
-    greenFrom: 50,
-    greenTo: 100,
-    minorTicks: 10,
-    max: 100,
-  };
+    if (!data) return <p>Carregando dados...</p>;
 
-  const stateChartOptions = {
-    chart: { type: "line" },
-    title: { text: "Pressão de Saída (Bar)" },
-    xAxis: { categories: timeData },
-    yAxis: { min: 0, max: 9, title: { text: "Pressão (Bar)" } },
-    series: [{ name: "Pressão", data: stateData }],
-    credits: { enabled: false },
-  };
+    const gaugeData = [
+        {
+            name: 'Nível de Água',
+            value: data.wlevel,
+            fill: '#0088FE',
+        },
+    ];
 
-  const wlevelChartOptions = {
-    chart: { type: "line" },
-    title: { text: "Nível de Água (%)" },
-    xAxis: { categories: timeData },
-    yAxis: { min: 0, max: 100, title: { text: "Nível (%)" } },
-    series: [{ name: "Nível", data: pump1Data }],
-    credits: { enabled: false },
-  };
+    const googleGaugeData = [
+        ['Label', 'Value'],
+        ['Nível', data.wlevel],
+        ['Bomba', data.pump1 ? 1 : 0],
+    ];
 
-  return (
-    <div className="dashboard">
-      <h2>MONITOR DE ÁGUA POTÁVEL</h2>
+    const googleGaugeOptions = {
+        width: 400,
+        height: 200,
+        redFrom: 0,
+        redTo: 30,
+        yellowFrom: 30,
+        yellowTo: 50,
+        greenFrom: 50,
+        greenTo: 100,
+        minorTicks: 5,
+        max: 100,
+    };
 
-      {loading && <p>Carregando...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    const renderIndicator = (label, value) => (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '8px',
+            }}
+        >
+            <div
+                style={{
+                    width: '15px',
+                    height: '15px',
+                    borderRadius: '50%',
+                    backgroundColor: value ? 'green' : 'red',
+                    marginRight: '8px',
+                }}
+            ></div>
+            <span>
+                {label}: {value ? 'Ligado' : 'Desligado'}
+            </span>
+        </div>
+    );
 
-      {!loading && !error && (
-        <>
-          <div className="status-container">
-            <h1>{statusText}</h1>
-          </div>
+    return (
+        <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+            <h2>Dashboard de Monitorização</h2>
 
-          <div className="container">
-            <Chart
-              chartType="Gauge"
-              data={[["Label", "Value"], ["Bar", stateData.at(-1) ?? 0]]}
-              options={gaugeOptions1}
+            {/* Gauges */}
+            <div style={{ display: 'flex', gap: '40px', justifyContent: 'center' }}>
+                {/*
+            <div>
+          <h3>Nível de Água (Recharts)</h3>
+          <RadialBarChart
+            width={300}
+            height={300}
+            cx="50%"
+            cy="50%"
+            innerRadius="80%"
+            outerRadius="100%"
+            barSize={20}
+            data={gaugeData}
+            startAngle={180}
+            endAngle={0}
+          >
+            <RadialBar minAngle={15} background clockWise dataKey="value" />
+            <Legend
+              iconSize={10}
+              layout="vertical"
+              verticalAlign="middle"
+              align="center"
             />
-
-            <Chart
-              chartType="Gauge"
-              data={[["Label", "Value"], ["%", pump1Data.at(-1) ?? 0]]}
-              options={gaugeOptions2}
-            />
+          </RadialBarChart>
+          <div style={{ textAlign: 'center', fontSize: '20px' }}>
+            {data.wlevel}%
           </div>
+        </div>
+        
+        */}
 
-          <div className="container">
-            <div className="chart-box">
-              <HighchartsReact highcharts={Highcharts} options={stateChartOptions} />
+
+                <div>
+                    <h3>Gauge Google</h3>
+                    <Chart
+                        chartType="Gauge"
+                        width="400px"
+                        height="200px"
+                        data={googleGaugeData}
+                        options={googleGaugeOptions}
+                    />
+                </div>
             </div>
-            <div className="chart-box">
-              <HighchartsReact highcharts={Highcharts} options={wlevelChartOptions} />
+
+            {/* Indicators */}
+            <div style={{ marginTop: '30px' }}>
+                <h3>Estados</h3>
+                {renderIndicator('Bomba 1', data.pump1)}
+                {renderIndicator('Bomba 2', data.pump2)}
+                {renderIndicator('Proteção Bomba 1', data.protect_pump1)}
+                {renderIndicator('Proteção Bomba 2', data.protect_pump2)}
+                {renderIndicator('Contato A1 Bomba 1', data.a1_contact_pump1)}
+                {renderIndicator('Contato A1 Bomba 2', data.a1_contact_pump2)}
             </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+        </div>
+    );
+};
 
 export default Dashboard;
