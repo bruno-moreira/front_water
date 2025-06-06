@@ -5,12 +5,19 @@ import { Chart } from 'react-google-charts';
 
 const Dashboard = () => {
     const [data, setData] = useState(null);
+    const [history, setHistory] = useState([]);
 
     const fetchData = async () => {
         try {
             const response = await axios.get('http://localhost:3000/api/nivel/');
-            const latestData = response.data[response.data.length - 1];
+            const allData = response.data;
+            const latestData = allData[allData.length - 1];
             setData(latestData);
+            const levelHistory = allData.map((entry, index) => [
+                `Registo ${index + 1}`,
+                entry.wlevel
+            ]);
+            setHistory([['Registo', 'Nível de Água'], ...levelHistory]);
         } catch (error) {
             console.error('Erro ao buscar dados:', error);
         }
@@ -18,23 +25,13 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchData();
-
         const interval = setInterval(() => {
             fetchData();
         }, 3000);
-
         return () => clearInterval(interval);
     }, []);
 
     if (!data) return <p>Carregando dados...</p>;
-
-    const gaugeData = [
-        {
-            name: 'Nível de Água',
-            value: data.wlevel,
-            fill: '#0088FE',
-        },
-    ];
 
     const googleGaugeData = [
         ['Label', 'Value'],
@@ -55,14 +52,15 @@ const Dashboard = () => {
         max: 100,
     };
 
+    const areaChartOptions = {
+        title: 'Histórico do Nível de Água',
+        hAxis: { title: 'Registo', titleTextStyle: { color: '#333' } },
+        vAxis: { minValue: 0 },
+        chartArea: { width: '70%', height: '70%' },
+    };
+
     const renderIndicator = (label, value) => (
-        <div
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '8px',
-            }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
             <div
                 style={{
                     width: '15px',
@@ -72,9 +70,7 @@ const Dashboard = () => {
                     marginRight: '8px',
                 }}
             ></div>
-            <span>
-                {label}: {value ? 'Ligado' : 'Desligado'}
-            </span>
+            <span>{label}: {value ? 'Ligado' : 'Desligado'}</span>
         </div>
     );
 
@@ -82,60 +78,40 @@ const Dashboard = () => {
         <div style={{ padding: '20px', fontFamily: 'Arial' }}>
             <h2>Dashboard de Monitorização</h2>
 
-            {/* Gauges */}
-            <div style={{ display: 'flex', gap: '40px', justifyContent: 'center' }}>
-                {/*
-            <div>
-          <h3>Nível de Água (Recharts)</h3>
-          <RadialBarChart
-            width={300}
-            height={300}
-            cx="50%"
-            cy="50%"
-            innerRadius="80%"
-            outerRadius="100%"
-            barSize={20}
-            data={gaugeData}
-            startAngle={180}
-            endAngle={0}
-          >
-            <RadialBar minAngle={15} background clockWise dataKey="value" />
-            <Legend
-              iconSize={10}
-              layout="vertical"
-              verticalAlign="middle"
-              align="center"
-            />
-          </RadialBarChart>
-          <div style={{ textAlign: 'center', fontSize: '20px' }}>
-            {data.wlevel}%
-          </div>
-        </div>
-        
-        */}
-
-
+            {/* Secção extra com novo gauge e indicadores */}
+            <div style={{ display: 'flex', marginTop: '40px', justifyContent: 'center', gap: '60px' }}>
                 <div>
-                    <h3>Gauge Google</h3>
+                    <h3>Nível de Água Potável</h3>
                     <Chart
                         chartType="Gauge"
-                        width="400px"
-                        height="200px"
-                        data={googleGaugeData}
+                        width="300px"
+                        height="160px"
+                        data={[["Label", "Value"], ["Nível", data.wlevel]]}
                         options={googleGaugeOptions}
                     />
                 </div>
-            </div>
 
-            {/* Indicators */}
-            <div style={{ marginTop: '30px' }}>
-                <h3>Estados</h3>
+                <div>
+                    <h3>Indicadores</h3>
                 {renderIndicator('Bomba 1', data.pump1)}
                 {renderIndicator('Bomba 2', data.pump2)}
                 {renderIndicator('Proteção Bomba 1', data.protect_pump1)}
                 {renderIndicator('Proteção Bomba 2', data.protect_pump2)}
                 {renderIndicator('Contato A1 Bomba 1', data.a1_contact_pump1)}
                 {renderIndicator('Contato A1 Bomba 2', data.a1_contact_pump2)}
+                </div>
+            </div>
+
+            {/* Gráfico de Área */}
+            <div style={{ marginTop: '60px' }}>
+                <h3>Histórico do Nível</h3>
+                <Chart
+                    chartType="AreaChart"
+                    width="100%"
+                    height="400px"
+                    data={history}
+                    options={areaChartOptions}
+                />
             </div>
         </div>
     );
