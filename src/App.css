@@ -1,42 +1,49 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* Root app container to occupy full viewport */
+.app-root {
+  min-height: 100vh;
+  min-width: 100vw;
+  display: grid;
+  grid-template-rows: 1fr;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Utility layout tokens */
+:root {
+  --color-bg: #0b1020;
+  --color-surface: #0f172a;
+  --color-surface-2: #111827;
+  --color-primary: #3b82f6;
+  --color-primary-700: #1d4ed8;
+  --color-text: #e5e7eb;
+  --color-muted: #94a3b8;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Scales tuned for TV/desktop/mobile using clamp */
+  --space-1: clamp(6px, 0.5vw, 8px);
+  --space-2: clamp(10px, 0.8vw, 12px);
+  --space-3: clamp(12px, 1.2vw, 16px);
+  --space-4: clamp(16px, 1.6vw, 20px);
+  --space-5: clamp(20px, 2vw, 24px);
+  --space-6: clamp(24px, 2.4vw, 32px);
+
+  --text-xs: clamp(12px, 0.9vw, 14px);
+  --text-sm: clamp(14px, 1.1vw, 16px);
+  --text-md: clamp(16px, 1.3vw, 18px);
+  --text-lg: clamp(18px, 1.8vw, 22px);
+  --text-xl: clamp(22px, 2.2vw, 28px);
+  --text-2xl: clamp(26px, 2.8vw, 34px);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Global background for immersive layout */
+html, body, #root {
+  height: 100%;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+body {
+  background: radial-gradient(1200px 800px at 10% 10%, rgba(59,130,246,0.15), transparent),
+              radial-gradient(1200px 800px at 90% 20%, rgba(29,78,216,0.12), transparent),
+              var(--color-bg);
+  color: var(--color-text);
 }
